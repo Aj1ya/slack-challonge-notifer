@@ -181,15 +181,32 @@ function listenForChallongeEvents() {
           loser_score = score1;
         }
 
-        const emoji = '\u{1F451}';
+        const emoji = '\u{1F3C6}';
         const lose_emoji = '\u{1F623}';
+        const pong = '\u{1F3D3}';
         const message = {
           "attachments": [
               {
+                type: "header",
+                color: "#2eb886",
+                title: winner_name + " vs " + loser_name + " | " + winner_score + "-" + loser_score + pong + "\n"
+              },
+              {
                 type: "section",
                 color: "#2eb886",
-                title: "New Match Recorded! (  " + winner_name + "  " + emoji + "  vs  " + loser_name + "  " + lose_emoji + "  )",
-                  text: winner_name + " has won the game!\n Score:" + winner_score + "-" + loser_score
+                title: emoji + "  Winner",
+                  text: "#1 " + winner_name + "\n"
+              },
+              {
+                type: "section",
+                color: "#2eb886",
+                title: lose_emoji + "  Winner",
+                  text: "#2 " + loser_name + "\n"
+              },
+              {
+                type: "section",
+                color: "#2eb886",
+                text: "Better luck next time  " + loser_name + "!"
               }
           ]
         };
