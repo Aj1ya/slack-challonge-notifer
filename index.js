@@ -22,37 +22,7 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-const savedData = getSavedData();
-if (savedData) {
-  console.log(`Your Slack URL is ${savedData.slackUrl}`);
-  console.log(`Your Challonge Username is ${savedData.username}`);
-  console.log(`Your Challonge API Key is ${savedData.apikey}`);
-  console.log(`Your Challonge Tournament ID is ${savedData.tournamentid}`);
-
-  rl.question('Do you want to update the data? (yes/no): ', (answer) => {
-    if (answer.toLowerCase() === 'yes') {
-      rl.question('Enter your new Slack URL: ', (slackUrl) => {
-        rl.question('Enter your new Challonge Username: ', (username) => {
-          rl.question('Enter your new Challonge API Key: ', (apikey) => {
-            rl.question('Enter your new Challonge Tournament ID: ', (tournamentid) => {
-              const newData = {
-                slackUrl: slackUrl,
-                username: username,
-                apikey: apikey,
-                tournamentid: tournamentid
-              };
-              saveData(newData);
-              console.log('Data updated successfully!');
-              listenForChallongeEvents();
-            });
-          });
-        });
-      });
-    } else {
-      listenForChallongeEvents();
-    }
-  });
-} else {
+function challongeInputs(){
   rl.question('Enter your Slack URL: ', (slackUrl) => {
     rl.question('Enter your Challonge Username: ', (username) => {
       rl.question('Enter your Challonge API Key: ', (apikey) => {
@@ -63,13 +33,50 @@ if (savedData) {
             apikey: apikey,
             tournamentid: tournamentid
           };
-          saveData(newData);
-          console.log('Data saved successfully!');
-          listenForChallongeEvents();
+          if (newData.slackUrl && newData.username && newData.apikey && newData.tournamentid) {
+            if ((newData.slackUrl ?? null !== null) &&
+              (newData.username ?? null !== null) &&
+              (newData.apikey ?? null !== null) &&
+              (newData.tournamentid ?? null !== null)) {
+            // properties are not null
+            saveData(newData);
+            challongeEvent();
+          } else {
+            // properties are null
+            console.log('All data is required');
+            challongeInputs();
+          }
+          } else {
+            console.log('You will need to enter all the data required.');
+            challongeInputs();
+          }
         });
       });
     });
   });
+}
+
+const savedData = getSavedData();
+if (savedData) {
+  console.log(`Your Slack URL is ${savedData.slackUrl}`);
+  console.log(`Your Challonge Username is ${savedData.username}`);
+  console.log(`Your Challonge API Key is ${savedData.apikey}`);
+  console.log(`Your Challonge Tournament ID is ${savedData.tournamentid}`);
+
+  rl.question('Do you want to update the data? (yes/no): ', (answer) => {
+    if (answer.toLowerCase() === 'yes') {
+      challongeInputs();
+    } else {
+      while(!(savedData.slackUrl && savedData.username && savedData.apikey && savedData.tournamentid)){
+        console.log('you will need to enter all the data required');
+        challongeInputs();
+        return;
+      }
+      challongeEvent();
+    }
+  });
+} else {
+  challongeInputs();
 }
 
 function listenForChallongeEvents() {
@@ -78,10 +85,10 @@ function listenForChallongeEvents() {
 
   const init = require('./utils/init');
   const cli = require('./utils/cli');
-  const log = require('./utils/log');  
+  const log = require('./utils/log');
   const axios = require('axios');
-  const fetch = require('node-fetch');  
-  
+  const fetch = require('node-fetch');
+
   const input = cli.input;
   const flags = cli.flags;
   const { clear, debug } = flags;
@@ -91,7 +98,7 @@ function listenForChallongeEvents() {
     input.includes(`help`) && cli.showHelp(0);
 
     debug && log(flags);
-  
+
     if(input.includes('report')){
 
       // gets the participants of the tournament
@@ -109,18 +116,20 @@ function listenForChallongeEvents() {
         }
       });
 
-      saveMatches(matches_data.data);
+      saveMatches(matches_data);
 
       // saves the matches to a json file only if it doesn't exist previously
       function saveMatches(matches) {
         try {
-          const jsonData = fs.readFileSync('stored-matches.json', 'utf8');
-          if( !jsonData ){
-            fs.writeFileSync('stored-matches.json', JSON.stringify(matches), 'utf8');
-          }
+          fs.access('stored-matches.json', fs.constants.F_OK, (err) => {
+            if (err) {
+              fs.writeFileSync('stored-matches.json', JSON.stringify(matches.data), 'utf8');
+              return;
+            }
+          });
         } catch (error) {
           console.error('Error occurred while saving data:', error);
-        }        
+        }
       }
 
       // Function to load previously stored matches
@@ -134,37 +143,37 @@ function listenForChallongeEvents() {
       }
 
       // Get the latest matches from the API
-      const matchesResponse = matches_data;
-      const latestMatches = matchesResponse.data;
-      
+      // const matchesResponse = matches_data.data;
+      const latestMatches = matches_data.data;
+
       // Load previously stored matches
       const storedMatches = loadStoredMatches();
-        
+
       // Compare the stored matches with the latest matches
       const newMatches = latestMatches.filter((match) => {
         matchCheck(match, storedMatches)
         function matchCheck(){
-          storedMatches.forEach(storedmatch => {              
+          storedMatches.forEach(storedmatch => {
             if (storedmatch.match.id === match.match.id){
-              if(storedmatch.match.scores_csv !== match.match.scores_csv) {  
+              if(storedmatch.match.scores_csv !== match.match.scores_csv) {
                 sendSlackMessage(match.match.winner_id, match.match.loser_id, match.match.scores_csv);
                 // update the stored match score for the game within the stored-matches.json file
                 storedmatch.match.scores_csv = match.match.scores_csv;
                 fs.writeFileSync('stored-matches.json', JSON.stringify(storedMatches), 'utf8');
               }
-            } 
-          });            
+            }
+          });
         }
       });
 
       function sendSlackMessage(){
-        const winner_id = arguments[0];    
+        const winner_id = arguments[0];
         const winner_name = players[winner_id];
         const loser_id = arguments[1];
         const loser_name = players[loser_id];
         const score = arguments[2];
 
-        const emoji = '\u{1F44D}'; 
+        const emoji = '\u{1F44D}';
         const message = {
           "attachments": [
               {
@@ -177,19 +186,22 @@ function listenForChallongeEvents() {
               }
           ]
         };
-        fetch(slackUrl, {
-            method: 'POST',
-            headers: {
-            'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(message)
-        })
-        .then(response => console.log(response))
-        .catch(error => console.error(error));
-        
-      }  
+        console.log(message);
+        // fetch(slackUrl, {
+        //     method: 'POST',
+        //     headers: {
+        //     'Content-Type': 'application/json'
+        //     },
+        //     body: JSON.stringify(message)
+        // })
+        // .then(response => console.log(response))
+        // .catch(error => console.error(error));
+
+      }
     }
-  })();  
+  })();
 }
 
-setInterval(listenForChallongeEvents, 5000);
+function challongeEvent(){
+  setInterval(listenForChallongeEvents, 5000);
+}
