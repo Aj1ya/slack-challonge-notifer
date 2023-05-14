@@ -186,17 +186,15 @@ function listenForChallongeEvents() {
               }
           ]
         };
-        console.log(message);
-        // fetch(slackUrl, {
-        //     method: 'POST',
-        //     headers: {
-        //     'Content-Type': 'application/json'
-        //     },
-        //     body: JSON.stringify(message)
-        // })
-        // .then(response => console.log(response))
-        // .catch(error => console.error(error));
-
+        fetch(slackUrl, {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(message)
+        })
+        .then(response => console.log(response))
+        .catch(error => console.error(error));
       }
     }
   })();
