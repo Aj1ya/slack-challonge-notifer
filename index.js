@@ -171,21 +171,29 @@ function listenForChallongeEvents() {
         const winner_name = players[winner_id];
         const loser_id = arguments[1];
         const loser_name = players[loser_id];
-        const score = arguments[2];
+        const scores = arguments[2];
+        const [score1, score2] = scores.split('-').map(Number);
+        if( score1 > score2 ){
+          winner_score = score1;
+          loser_score = score2;
+        }else{
+          winner_score = score2;
+          loser_score = score1;
+        }
 
-        const emoji = '\u{1F44D}';
+        const emoji = '\u{1F451}';
+        const lose_emoji = '\u{1F623}';
         const message = {
           "attachments": [
               {
-                text: "New Match Recorded! (" + winner_name + " vs " + loser_name + ")",
-              },
-              {
-                  text: winner_name + " has won the game!" + emoji
-              },{
-                  text: "Score: " + score
+                type: "section",
+                color: "#2eb886",
+                title: "New Match Recorded! (  " + winner_name + "  " + emoji + "  vs  " + loser_name + "  " + lose_emoji + "  )",
+                  text: winner_name + " has won the game!\n Score:" + winner_score + "-" + loser_score
               }
           ]
         };
+        console.log(message);
         fetch(slackUrl, {
             method: 'POST',
             headers: {
