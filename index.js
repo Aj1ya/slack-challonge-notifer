@@ -72,7 +72,6 @@ if (savedData) {
   });
 }
 
-
 function listenForChallongeEvents() {
   const { slackUrl, username, apikey, tournamentid } = getSavedData();
   const challongeUrl= 'https://'+username+':'+apikey+'@api.challonge.com/v1/tournaments/'+tournamentid;
@@ -112,9 +111,6 @@ function listenForChallongeEvents() {
 
       saveMatches(matches_data.data);
 
-      //   -----------------------------------------
-
-      
       // saves the matches to a json file only if it doesn't exist previously
       function saveMatches(matches) {
         try {
@@ -195,6 +191,5 @@ function listenForChallongeEvents() {
     }
   })();  
 }
-
 
 setInterval(listenForChallongeEvents, 5000);
