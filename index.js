@@ -17,6 +17,8 @@ function saveData(data) {
   fs.writeFileSync(dataFile, JSON.stringify(data), 'utf8');
 }
 
+process.setMaxListeners(15);
+
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
@@ -34,10 +36,7 @@ function challongeInputs(){
             tournamentid: tournamentid
           };
           if (newData.slackUrl && newData.username && newData.apikey && newData.tournamentid) {
-            if ((newData.slackUrl ?? null !== null) &&
-              (newData.username ?? null !== null) &&
-              (newData.apikey ?? null !== null) &&
-              (newData.tournamentid ?? null !== null)) {
+          if (newData.slackUrl.trim() !== '' && newData.username.trim() !== '' && newData.apikey.trim() !== '' && newData.tournamentid.trim() !== '') {
             // properties are not null
             saveData(newData);
             challongeEvent();
@@ -107,6 +106,10 @@ function listenForChallongeEvents() {
       // get the matches of the tournament
       const matches_data = await axios.get( challongeUrl + '/matches.json' );
 
+      // get the tournament name
+      const tournament = await axios.get( challongeUrl + '.json' );
+      const tournament_name = tournament.data.tournament.name;
+
       // Assuming participants_data is populated with relevant data
       const players = {};
 
@@ -156,7 +159,7 @@ function listenForChallongeEvents() {
           storedMatches.forEach(storedmatch => {
             if (storedmatch.match.id === match.match.id){
               if(storedmatch.match.scores_csv !== match.match.scores_csv) {
-                sendSlackMessage(match.match.winner_id, match.match.loser_id, match.match.scores_csv);
+                // sendSlackMessage(match.match.winner_id, match.match.loser_id, match.match.scores_csv);
                 // update the stored match score for the game within the stored-matches.json file
                 storedmatch.match.scores_csv = match.match.scores_csv;
                 fs.writeFileSync('stored-matches.json', JSON.stringify(storedMatches), 'utf8');
@@ -186,31 +189,42 @@ function listenForChallongeEvents() {
         const pong = '\u{1F3D3}';
         const message = {
           "attachments": [
-              {
-                type: "header",
-                color: "#2eb886",
-                title: winner_name + " vs " + loser_name + " | " + winner_score + "-" + loser_score + pong + "\n"
-              },
-              {
-                type: "section",
-                color: "#2eb886",
-                title: emoji + "  Winner",
-                  text: "#1 " + winner_name + "\n"
-              },
-              {
-                type: "section",
-                color: "#2eb886",
-                title: lose_emoji + "  Winner",
-                  text: "#2 " + loser_name + "\n"
-              },
-              {
-                type: "section",
-                color: "#2eb886",
-                text: "Better luck next time  " + loser_name + "!"
-              }
+            {
+              type: "header",
+              color: "#2eb886",
+              title: winner_name + " vs " + loser_name + " | " + winner_score + "-" + loser_score + pong + "\n"
+            },
+            {
+              type: "section",
+              color: "#2eb886",
+              title: emoji + "  Winner",
+                text: "#1 " + winner_name + "\n"
+            },
+            {
+              type: "section",
+              color: "#2eb886",
+              title: lose_emoji + "  Winner",
+                text: "#2 " + loser_name + "\n"
+            },
+            {
+              type: "section",
+              color: "#2eb886",
+              text: "Better luck next time  " + loser_name + "!"
+            }
+            // ,{
+            //   type: "section",
+            //   url: "https://challonge.com/" + tournament_name,
+            //   action_id: "button-action",
+            //   text: {
+            //     type: "plain_text",
+            //     text: "View Tournament"
+            //   }
+            // },
+            // {
+            //   type: "divider"
+            // }
           ]
         };
-        console.log(message);
         fetch(slackUrl, {
             method: 'POST',
             headers: {
@@ -219,7 +233,9 @@ function listenForChallongeEvents() {
             body: JSON.stringify(message)
         })
         .then(response => console.log(response))
-        .catch(error => console.error(error));
+        .catch(error => {
+          console.error('Error occurred while sending slack message:', error);
+        });
       }
     }
   })();
@@ -228,3 +244,13 @@ function listenForChallongeEvents() {
 function challongeEvent(){
   setInterval(listenForChallongeEvents, 5000);
 }
+
+const fetch = require('node-fetch');
+const slackUrl = getSavedData().slackUrl;
+fetch(slackUrl, {
+  method: 'POST',
+  headers: {
+  'Content-Type': 'application/json'
+  },
+  body: "test"
+});
